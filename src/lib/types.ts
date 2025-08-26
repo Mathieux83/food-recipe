@@ -1,6 +1,5 @@
 export interface Food {
   name: string
-  image?: string
   category?: string
   source: {
     provider: string

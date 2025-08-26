@@ -1,6 +1,5 @@
 import { Food } from "@/lib/types";
 import React from "react";
-import Image from "next/image";
 
 interface FoodCardProps {
 	food: Food;
@@ -20,31 +19,6 @@ export default function FoodCard({
         ${isSelected ? "ring-2 ring-primary-500" : "hover:shadow-lg"}
         bg-white rounded-xl shadow-sm overflow-hidden`}
 		>
-			<div className='aspect-square w-full relative bg-gray-100'>
-				{food.image ? (
-					<Image
-						src={food.image}
-						alt={food.name}
-						className='object-cover'
-						fill
-						sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
-						onError={() => {
-							// Fallback to default image handled in the else clause
-						}}
-					/>
-				) : (
-					<div className='w-full h-full flex items-center justify-center'>
-						<Image
-							src='/file.svg'
-							alt='No image'
-							width={48}
-							height={48}
-							className='opacity-30'
-						/>
-					</div>
-				)}
-			</div>
-
 			<div className='p-4'>
 				<h3 className='font-medium text-gray-900 mb-1 line-clamp-2'>
 					{food.name}
