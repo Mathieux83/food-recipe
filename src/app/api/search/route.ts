@@ -1,4 +1,6 @@
 // Route pour rechercher les aliments et les check
+// TODO: Switcher sur l'API de Spoonacular mieux c'est du ALL in ONE 
+// TODO: Ingredients et recette sur les ingredients 
 
 import { NextRequest, NextResponse } from "next/server";
 
