@@ -1,8 +1,8 @@
-// Route pour rechercher les aliments et les check
-// TODO: Switcher sur l'API de Spoonacular mieux c'est du ALL in ONE 
-// TODO: Ingredients et recette sur les ingredients 
-
+// src/app/api/search/route.ts
 import { NextRequest, NextResponse } from "next/server";
+
+const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
+const SPOONACULAR_BASE_URL = "https://api.spoonacular.com";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -18,6 +18,13 @@ export async function GET(request: NextRequest) {
 		);
 	}
 
+	if (!SPOONACULAR_API_KEY) {
+		return NextResponse.json(
+			{ error: "Clé API Spoonacular manquante" },
+			{ status: 500 }
+		);
+	}
+
 	if (limit > 100) {
 		return NextResponse.json(
 			{ error: "La limite ne peut pas dépasser 100" },
@@ -26,94 +33,82 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		// Construction de l'URL corrigée
-		const apiUrl = new URL("https://world.openfoodfacts.org/cgi/search.pl");
-		apiUrl.searchParams.set("search_terms", query);
-		apiUrl.searchParams.set("search_simple", "1");
-		apiUrl.searchParams.set("action", "process");
-		apiUrl.searchParams.set("json", "1");
-		apiUrl.searchParams.set("page_size", limit.toString());
-		apiUrl.searchParams.set("page", page.toString());
-		// Filtrer les produits avec des noms
-		apiUrl.searchParams.set("fields", "code,product_name,product_name_fr,generic_name_fr,categories,categories_tags");
+		// Recherche d'ingrédients via Spoonacular
+		const offset = (page - 1) * limit;
+		// https://api.spoonacular.com/food/ingredients/search
+		// const apiUrl = new URL(`https://api.spoonacular.com/food/ingredients/search`);
+		const apiUrl = new URL(`${SPOONACULAR_BASE_URL}/food/ingredients/search`);
+		apiUrl.searchParams.set("query", query);
+		apiUrl.searchParams.set("language", "fr");
+		apiUrl.searchParams.set("number", limit.toString());
+		apiUrl.searchParams.set("offset", offset.toString());
+		// apiUrl.searchParams.set("sort", "price");
+		// apiUrl.searchParams.set("sortDirection", "desc");
+		apiUrl.searchParams.set("apiKey", SPOONACULAR_API_KEY);
+
+		console.log("API URL:", apiUrl.toString());
+
 
 		const res = await fetch(apiUrl.toString(), {
 			headers: {
-				'User-Agent': 'FoodApp/1.0 (car.math@live.fr)', // Recommandé par Open Food Facts
+				'User-Agent': 'FoodApp/1.0',
 			},
-			next: { revalidate: 3600 }, // Cache pendant 1 heure au lieu de 24h
+			next: { revalidate: 3600 }, // Cache pendant 1 heure
 		});
 
 		if (!res.ok) {
-			console.error("Erreur API Open Food Facts:", res.status, res.statusText);
+			console.error("Erreur API Spoonacular:", res.status, res.statusText);
+			
+			// Gestion spécifique des erreurs Spoonacular
+			if (res.status === 402) {
+				return NextResponse.json(
+					{ error: "Quota API Spoonacular dépassé" },
+					{ status: 402 }
+				);
+			}
+			
 			return NextResponse.json(
-				{ error: "Erreur lors de la requête vers Open Food Facts" },
+				{ error: "Erreur lors de la requête vers Spoonacular" },
 				{ status: res.status }
 			);
 		}
 
 		const data = await res.json();
 		
-		// Vérifier si la réponse contient des produits
-		if (!data.products || !Array.isArray(data.products)) {
+		// Vérifier si la réponse contient des ingrédients
+		if (!data.results || !Array.isArray(data.results)) {
 			return NextResponse.json({
 				foods: [],
 				total: 0,
 				page,
 				limit,
-				source: "openfoodfacts",
+				source: "spoonacular",
 			});
 		}
 
-		const foods = data.products
-			.map((p: any) => {
-				// Nettoyer le nom du produit
-				const name = (
-					p.product_name_fr || 
-					p.product_name || 
-					p.generic_name_fr || 
-					""
-				).trim();
-
-				// Ignorer les produits sans nom
-				if (!name) return null;
-
-				// Nettoyer la catégorie
-				let category = "";
-				if (p.categories_tags && p.categories_tags.length > 0) {
-					// Prendre la première catégorie et enlever le préfixe de langue
-					category = p.categories_tags[0]
-						.replace(/^(en|fr):/i, "")
-						.replace(/-/g, " ")
-						.trim();
-				} else if (p.categories) {
-					category = p.categories.split(",")[0].trim();
-				}
-
-				return {
-					name,
-					category,
-					source: { 
-						provider: "openfoodfacts", 
-						id: p.code 
-					},
-				};
-			})
-			.filter((f: any) => f !== null); // Enlever les produits null
+		// Transformer les données Spoonacular en format Food
+		const foods = data.results.map((ingredient: any) => ({
+			name: ingredient.name,
+			category: ingredient.aisle || "Non catégorisé",
+			source: { 
+				provider: "spoonacular", 
+				id: ingredient.id.toString()
+			},
+			image: ingredient.image ? `https://spoonacular.com/cdn/ingredients_100x100/${ingredient.image}` : undefined
+		}));
 
 		return NextResponse.json({
 			foods,
-			total: data.count || 0,
+			total: data.totalResults || 0,
 			page,
 			limit,
-			hasMore: foods.length === limit, // Indiquer s'il y a plus de résultats
-			source: "openfoodfacts",
+			hasMore: foods.length === limit,
+			source: "spoonacular",
 		});
 
 	} catch (error) {
 		console.error("Erreur lors de la recherche:", error);
 		
-		// Plus d'informations sur l'erreur en développement
 		const isDev = process.env.NODE_ENV === 'development';
 		const errorMessage = isDev 
 			? `Erreur de recherche: ${error instanceof Error ? error.message : 'Erreur inconnue'}`

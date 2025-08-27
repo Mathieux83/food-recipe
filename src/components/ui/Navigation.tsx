@@ -12,12 +12,6 @@ const navItems = [
 		description: "Sélection d'aliments",
 	},
 	{
-		href: "/aliments",
-		label: "Aliments",
-		icon: "🥕",
-		description: "Tous les aliments",
-	},
-	{
 		href: "/recettes",
 		label: "Recettes",
 		icon: "👩‍🍳",
@@ -46,7 +40,7 @@ export default function Navigation() {
 	return (
 		<nav className='bg-white shadow-sm border-b border-gray-500 sticky top-0 z-50'>
 			<div className='container mx-auto px-4'>
-				<div className='flex items-center justify-between h-16'>
+				<div className='flex items-center justify-between h-16 '>
 					{/* LOGO */}
 					<Link href={"/"} className='flex items-center justify-between h-16'>
 						<span className='text-2xl'>🍽️</span>

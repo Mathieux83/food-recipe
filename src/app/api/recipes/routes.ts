@@ -1,2 +1,0 @@
-// TODO: implémenté l'api des recipes par ingredients sélectionné grace a l'api et a la route search 
-// TODO: et FoodCard qui stock les ingrédients sélectionnés de la recherche pour avoir une base pour rechercher des recettes via l'api avec ses ingredients la.

@@ -1,6 +1,7 @@
+// src/components/ui/SearchBar.tsx
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useDebouncedCallback } from "use-debounce";
 
 interface SearchBarProps {
@@ -9,6 +10,9 @@ interface SearchBarProps {
 	className?: string;
 	isLoading?: boolean;
 	error?: string;
+	value?: string;
+	onChange?: (value: string) => void;
+	onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export default function SearchBar({
@@ -17,15 +21,20 @@ export default function SearchBar({
 	className = "",
 	isLoading = false,
 	error = "",
+	value: controlledValue,
+	onChange,
+	onKeyPress,
 }: SearchBarProps) {
-	const [value, setValue] = useState("");
+	const [internalValue, setInternalValue] = useState("");
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	// Utiliser la valeur contrôlée si fournie, sinon utiliser la valeur interne
+	const value = controlledValue !== undefined ? controlledValue : internalValue;
+	const setValue = onChange || setInternalValue;
 
 	const debouncedSearch = useDebouncedCallback((term: string) => {
 		// Ne rechercher que si le terme fait au moins 2 caractères
 		if (term.trim().length >= 3) {
-			// onSearch(term.trim());
-
 			// Annuler le timeout précédent s'il existe
 			if (timeoutRef.current) {
 				clearTimeout(timeoutRef.current);
@@ -34,7 +43,7 @@ export default function SearchBar({
 			// Programmer un nouvel appel
 			timeoutRef.current = setTimeout(() => {
 				onSearch(term.trim());
-			}, 100);
+			}, 300);
 		} else if (term.trim().length === 0) {
 			onSearch(""); // Effacer les résultats si vide
 		}
@@ -45,16 +54,25 @@ export default function SearchBar({
 		onSearch("");
 	};
 
+	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newValue = e.target.value;
+		setValue(newValue);
+		
+		// Ne déclencher la recherche automatique que si onChange n'est pas fourni
+		// (mode non contrôlé)
+		if (!onChange) {
+			debouncedSearch(newValue);
+		}
+	};
+
 	return (
 		<div className={`relative ${className}`}>
 			<input
 				type='text'
 				placeholder={placeholder}
 				value={value}
-				onChange={(e) => {
-					setValue(e.target.value);
-					debouncedSearch(e.target.value);
-				}}
+				onChange={handleInputChange}
+				onKeyPress={onKeyPress}
 				className={`w-full px-6 py-4 pr-16 text-lg border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
 					error
 						? "border-red-300 focus:ring-red-500 focus:border-red-500"
