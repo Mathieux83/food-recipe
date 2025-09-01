@@ -51,7 +51,7 @@ const FoodPage = () => {
 
 		try {
 			const res = await fetch(
-				`/api/search?query=${encodeURIComponent(query.trim())}&limit=24`
+				`/api/search?query=${encodeURIComponent(query.trim())}&limit=5`
 			);
 
 			if (!res.ok) {

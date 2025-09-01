@@ -29,6 +29,31 @@ export interface Recipe {
   missedIngredients?: Ingredient[]
 }
 
+// Types pour les instructions analysées de Spoonacular
+export interface Step {
+  number: number
+  step: string
+  ingredients?: Array<{
+    id: number
+    name: string
+    image?: string
+  }>
+  equipment?: Array<{
+    id: number
+    name: string
+    image?: string
+  }>
+  length?: {
+    number: number
+    unit: string
+  }
+}
+
+export interface AnalyzedInstruction {
+  name: string
+  steps: Step[]
+}
+
 export interface RecipeDetail {
   id: string
   title: string
@@ -80,11 +105,19 @@ export interface RecipeDetail {
   winePairing?: {
     pairedWines?: string[]
     pairingText?: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    productMatches?: any[]
+    productMatches?: Array<{
+      id: number
+      title: string
+      description?: string
+      price?: string
+      imageUrl?: string
+      averageRating?: number
+      ratingCount?: number
+      score?: number
+      link?: string
+    }>
   }
 }
-
 export interface ShoppingItem {
   name: string
   quantity: number

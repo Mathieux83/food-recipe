@@ -1,7 +1,7 @@
 // src/app/recettes/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Recipe, RecipesResponse } from "@/lib/types";
 import RecipeCard from "@/components/ui/RecipeCard";
 import SearchBar from "@/components/ui/SearchBar";
@@ -15,9 +15,58 @@ export default function RecipesPage() {
 	const [error, setError] = useState("");
 	const [newIngredient, setNewIngredient] = useState("");
 	const [searchingIngredients, setSearchingIngredients] = useState(false);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const [ingredientSuggestions, setIngredientSuggestions] = useState<any[]>([]);
 	const [showSuggestions, setShowSuggestions] = useState(false);
 	const [ranking, setRanking] = useState("1"); // 1 = maximize used, 2 = minimize missing
+
+	// Recherche de recettes
+	const searchRecipes = useCallback(
+		async (ingredients: string[], searchRanking: string = ranking) => {
+			if (ingredients.length === 0) {
+				setRecipes([]);
+				return;
+			}
+
+			setLoading(true);
+			setError("");
+
+			try {
+				const ingredientsParam = ingredients.join(",");
+				const res = await fetch(
+					`/api/recipes?ingredients=${encodeURIComponent(
+						ingredientsParam
+					)}&limit=8&ranking=${searchRanking}`
+				);
+
+				if (!res.ok) {
+					const errorData = await res.json().catch(() => ({}));
+					throw new Error(errorData.error || `Erreur ${res.status}`);
+				}
+
+				const data: RecipesResponse = await res.json();
+				setRecipes(data.recipes || []);
+
+				if (data.recipes.length === 0) {
+					setError(
+						"Aucune recette trouvée avec ces ingrédients. Essayez d'ajouter d'autres ingrédients ou d'en retirer quelques-uns."
+					);
+				}
+			} catch (error) {
+				console.error("Erreur recherche recettes:", error);
+				setError(
+					error instanceof Error
+						? error.message
+						: "Une erreur est survenue lors de la recherche"
+				);
+				setRecipes([]);
+			} finally {
+				setLoading(false);
+			}
+		},
+		[ranking]
+	);
+
 
 	// Charger les ingrédients depuis localStorage au montage
 	useEffect(() => {
@@ -35,54 +84,7 @@ export default function RecipesPage() {
 				console.error("Erreur lors du chargement des ingrédients:", e);
 			}
 		}
-	}, []);
-
-	// Recherche de recettes
-	const searchRecipes = async (
-		ingredients: string[],
-		searchRanking: string = ranking
-	) => {
-		if (ingredients.length === 0) {
-			setRecipes([]);
-			return;
-		}
-
-		setLoading(true);
-		setError("");
-
-		try {
-			const ingredientsParam = ingredients.join(",");
-			const res = await fetch(
-				`/api/recipes?ingredients=${encodeURIComponent(
-					ingredientsParam
-				)}&limit=12&ranking=${searchRanking}`
-			);
-
-			if (!res.ok) {
-				const errorData = await res.json().catch(() => ({}));
-				throw new Error(errorData.error || `Erreur ${res.status}`);
-			}
-
-			const data: RecipesResponse = await res.json();
-			setRecipes(data.recipes || []);
-
-			if (data.recipes.length === 0) {
-				setError(
-					"Aucune recette trouvée avec ces ingrédients. Essayez d'ajouter d'autres ingrédients ou d'en retirer quelques-uns."
-				);
-			}
-		} catch (error) {
-			console.error("Erreur recherche recettes:", error);
-			setError(
-				error instanceof Error
-					? error.message
-					: "Une erreur est survenue lors de la recherche"
-			);
-			setRecipes([]);
-		} finally {
-			setLoading(false);
-		}
-	};
+	}, [searchRecipes]);
 
 	// Recherche de suggestions d'ingrédients
 	const searchIngredientSuggestions = async (query: string) => {
@@ -199,11 +201,6 @@ export default function RecipesPage() {
 						isLoading={searchingIngredients}
 						value={newIngredient}
 						onChange={setNewIngredient}
-						onKeyPress={(e) => {
-							if (e.key === "Enter") {
-								addIngredient();
-							}
-						}}
 					/>
 
 					{/* Suggestions d'ingrédients */}

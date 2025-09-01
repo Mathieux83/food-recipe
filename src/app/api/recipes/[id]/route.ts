@@ -1,14 +1,15 @@
 // src/app/api/recipes/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { AnalyzedInstruction } from "@/lib/types";
 
 const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
 const SPOONACULAR_BASE_URL = "https://api.spoonacular.com";
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
-) {
-	const recipeId = params.id;
+	{ params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+	const { id: recipeId } = await params;
 
 	if (!recipeId) {
 		return NextResponse.json(
@@ -25,37 +26,40 @@ export async function GET(
 	}
 
 	try {
-		// Récupérer les informations détaillées de la recette
-		const apiUrl = new URL(
+		// Récupérer les informations détaillées de la recette directement en français
+		const recipeUrl = new URL(
 			`${SPOONACULAR_BASE_URL}/recipes/${recipeId}/information`
 		);
-		apiUrl.searchParams.set("includeNutrition", "false");
-		apiUrl.searchParams.set("apiKey", SPOONACULAR_API_KEY);
+		recipeUrl.searchParams.set("includeNutrition", "false");
+		recipeUrl.searchParams.set("apiKey", SPOONACULAR_API_KEY);
+		recipeUrl.searchParams.set("instructionsRequired", "true");
+		recipeUrl.searchParams.set("fillIngredients", "true");
+		recipeUrl.searchParams.set("language", "fr"); // Demander directement en français
 
-		console.log("API URL:", apiUrl.toString())
-
-		const res = await fetch(apiUrl.toString(), {
+		// Récupérer la recette
+		const recipeRes = await fetch(recipeUrl.toString(), {
 			headers: {
 				"User-Agent": "FoodApp/1.0",
 			},
 			next: { revalidate: 3600 }, // Cache pendant 1 heure
 		});
 
-		if (!res.ok) {
+		// Vérifier les erreurs
+		if (!recipeRes.ok) {
 			console.error(
 				"Erreur API Spoonacular détail recette:",
-				res.status,
-				res.statusText
+				recipeRes.status,
+				recipeRes.statusText
 			);
 
-			if (res.status === 404) {
+			if (recipeRes.status === 404) {
 				return NextResponse.json(
 					{ error: "Recette non trouvée" },
 					{ status: 404 }
 				);
 			}
 
-			if (res.status === 402) {
+			if (recipeRes.status === 402) {
 				return NextResponse.json(
 					{ error: "Quota API Spoonacular dépassé" },
 					{ status: 402 }
@@ -64,11 +68,35 @@ export async function GET(
 
 			return NextResponse.json(
 				{ error: "Erreur lors de la récupération de la recette" },
-				{ status: res.status }
+				{ status: recipeRes.status }
 			);
 		}
 
-		const recipe = await res.json();
+		// Récupérer les données de la recette
+		const recipe = await recipeRes.json();
+
+		// Interface pour les ingrédients
+		interface SpoonacularIngredient {
+			id: number;
+			name: string;
+			nameClean?: string;
+			original: string;
+			amount: number;
+			unit: string;
+			measures?: {
+				metric?: {
+					amount?: number;
+					unitLong?: string;
+					unitShort?: string;
+				};
+				us?: {
+					amount?: number;
+					unitLong?: string;
+					unitShort?: string;
+				};
+			};
+			image?: string;
+		}
 
 		// Transformer les données en format RecipeDetail
 		const recipeDetail = {
@@ -93,12 +121,12 @@ export async function GET(
 			veryPopular: recipe.veryPopular,
 			sustainable: recipe.sustainable,
 			ingredients:
-				recipe.extendedIngredients?.map((ing: any) => ({
+				recipe.extendedIngredients?.map((ing: SpoonacularIngredient) => ({
 					id: ing.id,
 					name: ing.name,
 					nameClean: ing.nameClean,
 					original: ing.original,
-					originalString: ing.originalString,
+					originalString: ing.original,
 					amount: ing.amount,
 					unit: ing.unit,
 					measures: {
@@ -119,8 +147,7 @@ export async function GET(
 				})) || [],
 			instructions: extractInstructions(
 				recipe.instructions,
-				recipe.analyzedInstructions,
-				
+				recipe.analyzedInstructions
 			),
 			dishTypes: recipe.dishTypes || [],
 			diets: recipe.diets || [],
@@ -158,19 +185,16 @@ function stripHtml(html: string): string {
 	return html.replace(/<[^>]*>/g, "").trim();
 }
 
-
-// TODO: Récuperer via api avec param 'lang: "fr"'
-// Fonction pour extraire les instructions de différents formats
 function extractInstructions(
 	instructions: string,
-	analyzedInstructions: any[]
+	analyzedInstructions: AnalyzedInstruction[]
 ): string[] {
 	// Si on a des instructions analysées, les utiliser
 	if (analyzedInstructions && analyzedInstructions.length > 0) {
 		const steps: string[] = [];
 		analyzedInstructions.forEach((instruction) => {
 			if (instruction.steps && instruction.steps.length > 0) {
-				instruction.steps.forEach((step: any) => {
+				instruction.steps.forEach((step) => {
 					if (step.step && step.step.trim()) {
 						steps.push(step.step.trim());
 					}
@@ -194,5 +218,3 @@ function extractInstructions(
 
 	return ["Instructions non disponibles"];
 }
-
-

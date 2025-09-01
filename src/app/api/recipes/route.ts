@@ -1,4 +1,4 @@
-// TODO: implémenté l'api des recipes par ingredients sélectionné grace a l'api et a la route search 
+// TODO: implémenté l'api des recipes par ingredients sélectionné grace a l'api et a la route search
 // TODO: et FoodCard qui stock les ingrédients sélectionnés de la recherche pour avoir une base pour rechercher des recettes via l'api avec ses ingredients la.
 
 // src/app/api/recipes/route.ts
@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
 	try {
 		// Nettoyer et préparer la liste des ingrédients
 		const ingredients = ingredientsParam
-			.split(',')
-			.map(ing => ing.trim())
-			.filter(ing => ing.length > 0)
-			.join(',');
+			.split(",")
+			.map((ing) => ing.trim())
+			.filter((ing) => ing.length > 0)
+			.join(",");
 
 		if (!ingredients) {
 			return NextResponse.json(
@@ -49,26 +49,29 @@ export async function GET(request: NextRequest) {
 		apiUrl.searchParams.set("ranking", ranking);
 		apiUrl.searchParams.set("ignorePantry", "true"); // Ignorer les ingrédients de base
 		apiUrl.searchParams.set("apiKey", SPOONACULAR_API_KEY);
-
-		console.log('apiUrl:', apiUrl.toString());
+		apiUrl.searchParams.set("language", "fr");
 
 		const res = await fetch(apiUrl.toString(), {
 			headers: {
-				'User-Agent': 'FoodApp/1.0',
+				"User-Agent": "FoodApp/1.0",
 			},
 			next: { revalidate: 1800 }, // Cache pendant 30 minutes
 		});
 
 		if (!res.ok) {
-			console.error("Erreur API Spoonacular recettes:", res.status, res.statusText);
-			
+			console.error(
+				"Erreur API Spoonacular recettes:",
+				res.status,
+				res.statusText
+			);
+
 			if (res.status === 402) {
 				return NextResponse.json(
 					{ error: "Quota API Spoonacular dépassé" },
 					{ status: 402 }
 				);
 			}
-			
+
 			return NextResponse.json(
 				{ error: "Erreur lors de la recherche de recettes" },
 				{ status: res.status }
@@ -81,32 +84,42 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({
 				recipes: [],
 				total: 0,
-				ingredients: ingredients.split(','),
+				ingredients: ingredients.split(","),
 			});
 		}
 
 		// Transformer les données en format Recipe
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const recipes = data.map((recipe: any) => ({
 			id: recipe.id.toString(),
 			title: recipe.title,
 			image: recipe.image,
 			usedCount: recipe.usedIngredientCount || 0,
 			missedCount: recipe.missedIngredientCount || 0,
-			score: calculateScore(recipe.usedIngredientCount, recipe.missedIngredientCount),
-			usedIngredients: recipe.usedIngredients?.map((ing: any) => ({
-				id: ing.id,
-				name: ing.name,
-				image: ing.image,
-				amount: ing.amount,
-				unit: ing.unit
-			})) || [],
-			missedIngredients: recipe.missedIngredients?.map((ing: any) => ({
-				id: ing.id,
-				name: ing.name,
-				image: ing.image,
-				amount: ing.amount,
-				unit: ing.unit
-			})) || []
+			score: calculateScore(
+				recipe.usedIngredientCount,
+				recipe.missedIngredientCount
+			),
+
+			usedIngredients:
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				recipe.usedIngredients?.map((ing: any) => ({
+					id: ing.id,
+					name: ing.name,
+					image: ing.image,
+					amount: ing.amount,
+					unit: ing.unit,
+				})) || [],
+
+			missedIngredients:
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				recipe.missedIngredients?.map((ing: any) => ({
+					id: ing.id,
+					name: ing.name,
+					image: ing.image,
+					amount: ing.amount,
+					unit: ing.unit,
+				})) || [],
 		}));
 
 		// Trier par score (ingrédients utilisés vs manquants)
@@ -115,22 +128,20 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json({
 			recipes,
 			total: recipes.length,
-			ingredients: ingredients.split(','),
-			source: "spoonacular"
+			ingredients: ingredients.split(","),
+			source: "spoonacular",
 		});
-
 	} catch (error) {
 		console.error("Erreur lors de la recherche de recettes:", error);
-		
-		const isDev = process.env.NODE_ENV === 'development';
-		const errorMessage = isDev 
-			? `Erreur de recherche: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+
+		const isDev = process.env.NODE_ENV === "development";
+		const errorMessage = isDev
+			? `Erreur de recherche: ${
+					error instanceof Error ? error.message : "Erreur inconnue"
+			  }`
 			: "Une erreur est survenue lors de la recherche de recettes";
 
-		return NextResponse.json(
-			{ error: errorMessage },
-			{ status: 500 }
-		);
+		return NextResponse.json({ error: errorMessage }, { status: 500 });
 	}
 }
 
@@ -138,5 +149,5 @@ export async function GET(request: NextRequest) {
 function calculateScore(used: number, missed: number): number {
 	if (used === 0) return 0;
 	// Score = (ingrédients utilisés * 100) - (ingrédients manquants * 10)
-	return (used * 100) - (missed * 10);
+	return used * 100 - missed * 10;
 }

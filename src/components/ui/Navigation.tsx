@@ -6,6 +6,7 @@ import { useState } from "react";
 
 const navItems = [
 	{
+		onClick: () => window.location.reload(),
 		href: "/",
 		label: "Accueil",
 		icon: "🏠",
@@ -42,7 +43,9 @@ export default function Navigation() {
 			<div className='container mx-auto px-4'>
 				<div className='flex items-center justify-between h-16 '>
 					{/* LOGO */}
-					<Link href={"/"} className='flex items-center justify-between h-16'>
+					<Link 
+						onClick={() => window.location.reload()}
+						href={"/"} className='flex items-center justify-between h-16'>
 						<span className='text-2xl'>🍽️</span>
 						<span className='text-2xl font-bold text-primary-600'>
 							Food App
@@ -57,6 +60,7 @@ export default function Navigation() {
 								(item.href !== "/" && pathname.startsWith(item.href));
 							return (
 								<Link
+									onClick={item.onClick}
 									key={item.href}
 									href={item.href}
 									className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -125,9 +129,10 @@ export default function Navigation() {
 									(item.href !== "/" && pathname.startsWith(item.href));
 								return (
 									<Link
+										onNavigate={closeMobileMenu}
 										key={item.href}
 										href={item.href}
-										onClick={closeMobileMenu}
+										onClick={item.onClick}
 										className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-200 ${
 											isActive
 												? "bg-primary-100 text-primary-700"

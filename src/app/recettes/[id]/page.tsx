@@ -161,7 +161,7 @@ export default function RecipeDetailPage() {
 									src={recipe.image}
 									alt={recipe.title}
 									// fill
-									className="object-fill h-[150%] w-[150%]"
+									className="object-fill h-[100%] w-[100%]"
                                     height={1000}
                                     width={1000}
 									// sizes="(max-width: 768px) 100vw, 50vw"

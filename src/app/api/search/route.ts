@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
 	const query = (searchParams.get("query") || "").trim();
 	const page = Number(searchParams.get("page") || "1");
-	const limit = Number(searchParams.get("limit") || "20");
+	const limit = Number(searchParams.get("limit") || "5");
 
 	// Validation des paramètres
 	if (!query) {
@@ -38,27 +38,27 @@ export async function GET(request: NextRequest) {
 		// https://api.spoonacular.com/food/ingredients/search
 		// const apiUrl = new URL(`https://api.spoonacular.com/food/ingredients/search`);
 		const apiUrl = new URL(`${SPOONACULAR_BASE_URL}/food/ingredients/search`);
+		// Améliorer la recherche en français
 		apiUrl.searchParams.set("query", query);
-		apiUrl.searchParams.set("language", "fr");
 		apiUrl.searchParams.set("number", limit.toString());
 		apiUrl.searchParams.set("offset", offset.toString());
-		// apiUrl.searchParams.set("sort", "price");
-		// apiUrl.searchParams.set("sortDirection", "desc");
 		apiUrl.searchParams.set("apiKey", SPOONACULAR_API_KEY);
-
-		console.log("API URL:", apiUrl.toString());
-
+		apiUrl.searchParams.set("language", "fr");
+		apiUrl.searchParams.set("locale", "fr"); // Ajouter la locale française
+		// Ajouter des paramètres additionnels pour améliorer les résultats en français
+		apiUrl.searchParams.set("addChildren", "true"); // Inclure les variantes
+		apiUrl.searchParams.set("metaInformation", "true"); // Obtenir plus d'informations
 
 		const res = await fetch(apiUrl.toString(), {
 			headers: {
-				'User-Agent': 'FoodApp/1.0',
+				"User-Agent": "FoodApp/1.0",
 			},
 			next: { revalidate: 3600 }, // Cache pendant 1 heure
 		});
 
 		if (!res.ok) {
 			console.error("Erreur API Spoonacular:", res.status, res.statusText);
-			
+
 			// Gestion spécifique des erreurs Spoonacular
 			if (res.status === 402) {
 				return NextResponse.json(
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 					{ status: 402 }
 				);
 			}
-			
+
 			return NextResponse.json(
 				{ error: "Erreur lors de la requête vers Spoonacular" },
 				{ status: res.status }
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		const data = await res.json();
-		
+
 		// Vérifier si la réponse contient des ingrédients
 		if (!data.results || !Array.isArray(data.results)) {
 			return NextResponse.json({
@@ -87,14 +87,17 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Transformer les données Spoonacular en format Food
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const foods = data.results.map((ingredient: any) => ({
 			name: ingredient.name,
 			category: ingredient.aisle || "Non catégorisé",
-			source: { 
-				provider: "spoonacular", 
-				id: ingredient.id.toString()
+			source: {
+				provider: "spoonacular",
+				id: ingredient.id.toString(),
 			},
-			image: ingredient.image ? `https://spoonacular.com/cdn/ingredients_100x100/${ingredient.image}` : undefined
+			image: ingredient.image
+				? `https://spoonacular.com/cdn/ingredients_100x100/${ingredient.image}`
+				: undefined,
 		}));
 
 		return NextResponse.json({
@@ -105,18 +108,16 @@ export async function GET(request: NextRequest) {
 			hasMore: foods.length === limit,
 			source: "spoonacular",
 		});
-
 	} catch (error) {
 		console.error("Erreur lors de la recherche:", error);
-		
-		const isDev = process.env.NODE_ENV === 'development';
-		const errorMessage = isDev 
-			? `Erreur de recherche: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+
+		const isDev = process.env.NODE_ENV === "development";
+		const errorMessage = isDev
+			? `Erreur de recherche: ${
+					error instanceof Error ? error.message : "Erreur inconnue"
+			  }`
 			: "Une erreur est survenue lors de la recherche";
 
-		return NextResponse.json(
-			{ error: errorMessage },
-			{ status: 500 }
-		);
+		return NextResponse.json({ error: errorMessage }, { status: 500 });
 	}
 }
