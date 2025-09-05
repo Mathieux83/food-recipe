@@ -1,5 +1,6 @@
-// src/app/api/search/route.ts
+// src/app/api/search/route.ts - MISE À JOUR avec traduction automatique
 import { NextRequest, NextResponse } from "next/server";
+import { freeTranslationService } from "@/lib/translation";
 
 const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
 const SPOONACULAR_BASE_URL = "https://api.spoonacular.com";
@@ -33,22 +34,68 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		// Recherche d'ingrédients via Spoonacular
+		// 🌟 TRADUCTION AUTOMATIQUE FRANÇAIS → ANGLAIS
+		// Approche alternative : toujours tenter la traduction
+		let searchQuery = query;
+		let translationInfo = null;
+
+		console.log(`🔄 Tentative de traduction pour: "${query}"`);
+
+		try {
+			const translationResult = await freeTranslationService.translate(
+				query,
+				"fr",
+				"en"
+			);
+
+			// Utiliser la traduction si elle est différente du terme original et fiable
+			const isDifferent =
+				translationResult.translatedText.toLowerCase() !== query.toLowerCase();
+			const isReliable = translationResult.confidence > 0.3;
+
+			if (isDifferent && isReliable) {
+				searchQuery = translationResult.translatedText;
+				translationInfo = {
+					originalQuery: query,
+					translatedQuery: searchQuery,
+					confidence: translationResult.confidence,
+					source: translationResult.source,
+					used: true,
+				};
+				console.log(
+					`✅ Traduit "${query}" → "${searchQuery}" (${translationResult.source}, confiance: ${translationResult.confidence})`
+				);
+			} else {
+				console.log(`📝 Pas de traduction nécessaire pour "${query}"`);
+				translationInfo = {
+					originalQuery: query,
+					translatedQuery: translationResult.translatedText,
+					confidence: translationResult.confidence,
+					source: translationResult.source,
+					used: false,
+					reason: isDifferent ? "Low confidence" : "Same as original",
+				};
+			}
+		} catch (error) {
+			console.warn(`❌ Erreur de traduction pour "${query}":`, error);
+			// Continuer avec le terme original
+		}
+
+		// 🔍 RECHERCHE DANS SPOONACULAR
 		const offset = (page - 1) * limit;
-		// https://api.spoonacular.com/food/ingredients/search
-		// const apiUrl = new URL(`https://api.spoonacular.com/food/ingredients/search`);
 		const apiUrl = new URL(`${SPOONACULAR_BASE_URL}/food/ingredients/search`);
-		// Améliorer la recherche en français
-		apiUrl.searchParams.set("query", query);
+
+		// Utiliser le terme traduit pour la recherche
+		apiUrl.searchParams.set("query", searchQuery);
 		apiUrl.searchParams.set("number", limit.toString());
 		apiUrl.searchParams.set("offset", offset.toString());
 		apiUrl.searchParams.set("apiKey", SPOONACULAR_API_KEY);
-		// ! Ne fonctionne pas 
-		apiUrl.searchParams.set("language", "fr");
-		apiUrl.searchParams.set("locale", "fr"); // Ajouter la locale française
-		// Ajouter des paramètres additionnels pour améliorer les résultats en français
-		apiUrl.searchParams.set("addChildren", "true"); // Inclure les variantes
-		apiUrl.searchParams.set("metaInformation", "true"); // Obtenir plus d'informations
+
+		// Paramètres pour optimiser la recherche
+		apiUrl.searchParams.set("addChildren", "true");
+		apiUrl.searchParams.set("metaInformation", "true");
+
+		console.log(`🔍 Recherche Spoonacular avec: "${searchQuery}"`);
 
 		const res = await fetch(apiUrl.toString(), {
 			headers: {
@@ -78,12 +125,18 @@ export async function GET(request: NextRequest) {
 
 		// Vérifier si la réponse contient des ingrédients
 		if (!data.results || !Array.isArray(data.results)) {
+			console.log(`📝 Aucun résultat pour "${searchQuery}"`);
+
 			return NextResponse.json({
 				foods: [],
 				total: 0,
 				page,
 				limit,
 				source: "spoonacular",
+				searchInfo: {
+					searchedTerm: searchQuery,
+					translation: translationInfo,
+				},
 			});
 		}
 
@@ -101,6 +154,8 @@ export async function GET(request: NextRequest) {
 				: undefined,
 		}));
 
+		console.log(`✅ ${foods.length} résultats trouvés pour "${searchQuery}"`);
+
 		return NextResponse.json({
 			foods,
 			total: data.totalResults || 0,
@@ -108,6 +163,10 @@ export async function GET(request: NextRequest) {
 			limit,
 			hasMore: foods.length === limit,
 			source: "spoonacular",
+			searchInfo: {
+				searchedTerm: searchQuery,
+				translation: translationInfo,
+			},
 		});
 	} catch (error) {
 		console.error("Erreur lors de la recherche:", error);

@@ -4,6 +4,7 @@ import FoodCard from "@/components/ui/FoodCard";
 import SearchBar from "@/components/ui/SearchBar";
 import { Food } from "@/lib/types";
 import Link from "next/link";
+import { RxCross2 } from "react-icons/rx";
 
 const FoodPage = () => {
 	const [foods, setFoods] = useState<Food[]>([]);
@@ -28,7 +29,10 @@ const FoodPage = () => {
 	}, []);
 
 	useEffect(() => {
-		localStorage.setItem('selectedFoods', JSON.stringify(Array.from(selectedFoods)))
+		localStorage.setItem(
+			"selectedFoods",
+			JSON.stringify(Array.from(selectedFoods))
+		);
 	}, [selectedFoods]);
 
 	// Gestionnaire de recherche amélioré
@@ -51,7 +55,7 @@ const FoodPage = () => {
 
 		try {
 			const res = await fetch(
-				`/api/search?query=${encodeURIComponent(query.trim())}&limit=5`
+				`/api/search?query=${encodeURIComponent(query.trim())}&limit=6`
 			);
 
 			if (!res.ok) {
@@ -60,6 +64,23 @@ const FoodPage = () => {
 			}
 
 			const data = await res.json();
+
+			// if (data.searchInfo?.translation) {
+			// 	console.log(
+			// 		"Terme original:",
+			// 		data.searchInfo.translation.originalQuery
+			// 	);
+			// 	console.log(
+			// 		"Terme traduit:",
+			// 		data.searchInfo.translation.translatedQuery
+			// 	);
+			// 	console.log(
+			// 		"Source de traduction:",
+			// 		data.searchInfo.translation.source
+			// 	);
+			// 	console.log("Confiance:", data.searchInfo.translation.confidence);
+			// }
+
 			setFoods(data.foods || []);
 
 			// Message informatif si pas de résultats
@@ -80,6 +101,64 @@ const FoodPage = () => {
 			setLoading(false);
 		}
 	};
+
+	// //* TEST API
+	// // 3. 📊 Affichage des informations de traduction (optionnel)
+	// // eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// const TranslationInfo = ({ searchInfo }: { searchInfo: any }) => {
+	// 	if (!searchInfo?.translation) return null;
+
+	// 	const { translation } = searchInfo;
+
+	// 	return (
+	// 		<div className='text-sm text-gray-500 mb-2'>
+	// 			{translation.used ? (
+	// 				<span className='flex items-center'>
+	// 					<span className='text-blue-600 mr-1'>🔄</span>
+	// 					Recherche traduite : &apos;{translation.originalQuery}&apos; →
+	// 					&apos;
+	// 					{translation.translatedQuery}&apos;
+	// 					<span className='ml-2 text-xs bg-gray-100 px-2 py-1 rounded'>
+	// 						{translation.source} ({Math.round(translation.confidence * 100)}%)
+	// 					</span>
+	// 				</span>
+	// 			) : (
+	// 				translation.reason && (
+	// 					<span className='text-orange-600'>
+	// 						⚠️ Traduction non utilisée: {translation.reason}
+	// 					</span>
+	// 				)
+	// 			)}
+	// 		</div>
+	// 	);
+	// };
+
+	// // 4. 🧪 Test de toutes les APIs de traduction
+	// // ✅ Correct - appel via ton API Route
+	// const TestTranslationAPIs = () => {
+	// 	const testAPIs = async () => {
+	// 		try {
+	// 			const response = await fetch("/api/test-translation", {
+	// 				method: "POST",
+	// 				headers: {
+	// 					"Content-Type": "application/json",
+	// 				},
+	// 				body: JSON.stringify({
+	// 					text: "tomate cerise",
+	// 					fromLang: "fr",
+	// 					toLang: "en",
+	// 				}),
+	// 			});
+
+	// 			const data = await response.json();
+	// 			console.log("Test translation:", data);
+	// 		} catch (error) {
+	// 			console.error("Test failed:", error);
+	// 		}
+	// 	};
+
+	// 	return <button onClick={testAPIs} className="btn-secondary mt-5">Tester les APIs</button>;
+	// };
 
 	// Gestion de la sélection des aliments
 	const toggleFood = (foodName: string) => {
@@ -111,11 +190,11 @@ const FoodPage = () => {
 
 			{/* Barre de recherche */}
 			<div className='mb-8'>
-				<SearchBar 
-					onSearch={handleSearch} 
+				<SearchBar
+					onSearch={handleSearch}
 					isLoading={loading}
 					error={error}
-					placeholder="Rechercher un aliment (ex: tomate, pain, fromage...)"
+					placeholder='Rechercher un aliment (ex: tomate, pain, fromage...)'
 				/>
 			</div>
 
@@ -126,7 +205,7 @@ const FoodPage = () => {
 						<h3 className='font-medium text-gray-900'>
 							Ingrédients sélectionnés ({selectedFoods.size})
 						</h3>
-						<div className="flex gap-2">
+						<div className='flex gap-2'>
 							<button
 								onClick={clearSelection}
 								className='text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded-md hover:bg-gray-100 transition-colors'
@@ -147,20 +226,27 @@ const FoodPage = () => {
 									className='ml-2 text-primary-500 hover:text-primary-700 w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors'
 									aria-label={`Supprimer ${name}`}
 								>
-									×
+									<RxCross2 className="pt-1 h-5 w-5"/>
 								</button>
 							</span>
 						))}
 					</div>
-					
+
 					{/* Bouton pour aller aux recettes */}
-					<div className="flex justify-center pt-2 border-t border-gray-100">
-						<Link 
-							href="/recettes"
-							className="btn-primary flex items-center"
-						>
-							<svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+					<div className='flex justify-center pt-2 border-t border-gray-100'>
+						<Link href='/recettes' className='btn-primary flex items-center'>
+							<svg
+								className='w-4 h-4 mr-2'
+								fill='none'
+								stroke='currentColor'
+								viewBox='0 0 24 24'
+							>
+								<path
+									strokeLinecap='round'
+									strokeLinejoin='round'
+									strokeWidth={2}
+									d='M9 5l7 7-7 7'
+								/>
 							</svg>
 							Voir les recettes ({selectedFoods.size} ingrédients)
 						</Link>
@@ -179,21 +265,28 @@ const FoodPage = () => {
 			{/* Message d'aide pour commencer */}
 			{!loading && foods.length === 0 && !searchQuery && !error && (
 				<div className='text-center py-12 text-gray-500'>
-					<div className="text-6xl mb-6">🔍</div>
-					<p className='text-lg mb-2'>Commencez à taper pour rechercher des aliments</p>
-					<p className='text-sm mb-4'>Essayez &apos;tomate&apos;, &apos;pain&apos;, &apos;fromage&apos;, &apos;poulet&apos;...</p>
-					
+					<div className='text-6xl mb-6'>🔍</div>
+					<p className='text-lg mb-2'>
+						Commencez à taper pour rechercher des aliments
+					</p>
+					<p className='text-sm mb-4'>
+						Essayez &apos;tomate&apos;, &apos;pain&apos;, &apos;fromage&apos;,
+						&apos;poulet&apos;...
+					</p>
+
 					{/* Suggestions populaires */}
-					<div className="flex flex-wrap justify-center gap-2 mt-6">
-						{['tomate', 'oignon', 'ail', 'poulet', 'fromage', 'pain'].map((suggestion) => (
-							<button
-								key={suggestion}
-								onClick={() => handleSearch(suggestion)}
-								className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm transition-colors"
-							>
-								{suggestion}
-							</button>
-						))}
+					<div className='flex flex-wrap justify-center gap-2 mt-6'>
+						{["tomate", "oignon", "ail", "poulet", "fromage", "pain"].map(
+							(suggestion) => (
+								<button
+									key={suggestion}
+									onClick={() => handleSearch(suggestion)}
+									className='px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm transition-colors'
+								>
+									{suggestion}
+								</button>
+							)
+						)}
 					</div>
 				</div>
 			)}
@@ -203,7 +296,8 @@ const FoodPage = () => {
 				<>
 					<div className='flex justify-between items-center mb-4'>
 						<h2 className='text-lg font-medium text-gray-900'>
-							{foods.length} résultat{foods.length > 1 ? 's' : ''} pour &apos;{searchQuery}&apos;
+							{foods.length} résultat{foods.length > 1 ? "s" : ""} pour &apos;
+							{searchQuery}&apos;
 						</h2>
 					</div>
 					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
@@ -218,6 +312,12 @@ const FoodPage = () => {
 					</div>
 				</>
 			)}
+
+			{/* //* div pour afficher les test */}
+			{/* <div className='flex items-center justify-center'>
+				<TranslationInfo searchInfo={searchQuery} />
+				<TestTranslationAPIs />
+			</div> */}
 		</div>
 	);
 };

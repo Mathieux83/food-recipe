@@ -7,6 +7,7 @@ import RecipeCard from "@/components/ui/RecipeCard";
 import SearchBar from "@/components/ui/SearchBar";
 import Link from "next/link";
 import Image from "next/image";
+import { RxCross2 } from "react-icons/rx";
 
 export default function RecipesPage() {
 	const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -245,15 +246,6 @@ export default function RecipesPage() {
 							))}
 						</div>
 					)}
-
-					{/* Bouton d'ajout manuel */}
-					<button
-						onClick={() => addIngredient()}
-						disabled={!newIngredient.trim()}
-						className='absolute right-2 top-1/2 transform -translate-y-1/2 btn-primary py-1 px-3 text-sm disabled:bg-gray-300 disabled:cursor-not-allowed'
-					>
-						Ajouter
-					</button>
 				</div>
 
 				{/* Liste des ingrédients sélectionnés */}
@@ -271,7 +263,7 @@ export default function RecipesPage() {
 										className='ml-2 text-primary-500 hover:text-primary-700 w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-200 transition-colors'
 										aria-label={`Supprimer ${ingredient}`}
 									>
-										×
+										<RxCross2 className="pt-1 h-5 w-5"/>
 									</button>
 								</span>
 							))}
