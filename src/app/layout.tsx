@@ -11,6 +11,10 @@ export const metadata: Metadata = {
     default: 'FoodApp - Recettes et listes de courses'
   },
   description: 'Trouvez des recettes avec vos ingrédients et créez vos listes de courses automatiquement.',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
@@ -28,7 +32,7 @@ export default function RootLayout({
           </main>
           <footer className="mt-16 bg-black">
             <div className="container mx-auto py-2 text-center text-white ">
-              <p>&copy; 2025 FoodApp.</p>
+              <p>&copy; 2025 FoodApp by Star-Lore.</p>
             </div>
           </footer>
         </div>

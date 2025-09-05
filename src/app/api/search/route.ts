@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
 		apiUrl.searchParams.set("number", limit.toString());
 		apiUrl.searchParams.set("offset", offset.toString());
 		apiUrl.searchParams.set("apiKey", SPOONACULAR_API_KEY);
+		// ! Ne fonctionne pas 
 		apiUrl.searchParams.set("language", "fr");
 		apiUrl.searchParams.set("locale", "fr"); // Ajouter la locale française
 		// Ajouter des paramètres additionnels pour améliorer les résultats en français

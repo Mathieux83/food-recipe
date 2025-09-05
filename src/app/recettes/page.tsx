@@ -219,6 +219,8 @@ export default function RecipesPage() {
 										<Image
 											src={ingredient.image}
 											alt={ingredient.name}
+											width={40}
+											height={40}
 											className='w-8 h-8 object-contain'
 										/>
 									)}
